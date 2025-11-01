@@ -398,7 +398,7 @@ def generate_stls(
 
         if edge_poly.geom_type == 'MultiPolygon':
             terrain=[]
-            for e in edge_poly:
+            for e in edge_poly.geoms:
                 b=e.intersection(boundary)
                 if b.geom_type!='GeometryCollection':
                     t=terrain_mesh(dem,b,scale_factor,corner,height_factor,base_height,water_drop)

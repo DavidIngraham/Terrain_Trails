@@ -42,6 +42,6 @@ generate_stls(
                     "Rocky Dell Run",453899468,229200134,252686622,253313254,462884151,462884151,429200025],
     waterbody = ["North Park Lake","Marshall Lake",348866110,228929014,229173847],
     path_width=0.70,support_width=0.45,path_clearance=0.18,height_factor=3,base_height=8,
-    edge_width=1.5,max_print_size=[249,199],tiles=1,resolution=30,downsample_factor=2,dem_offset=[0,0],
+    edge_width=1.5,max_print_size=[249,199],tiles=2,resolution=30,downsample_factor=2,dem_offset=[0,0],
     map_only=False,compass_loc=[275,136])
 
