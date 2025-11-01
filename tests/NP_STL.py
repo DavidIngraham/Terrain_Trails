@@ -1,5 +1,5 @@
 
-import TerrainTrailSTL
+from terrain_trails.TerrainTrailSTL import generate_stls
 
 rds=["Babcock Boulevard","Pearce Mill Road","North Ridge Drive","North Ridge Lane",
           "Walter Road","Walters Road","Kummer Road","Ingomar Road","East Ingomar Road","Old Ingomar Road",
@@ -12,7 +12,6 @@ rds=["Babcock Boulevard","Pearce Mill Road","North Ridge Drive","North Ridge Lan
           907185767,252686619,374721426,11696941,913506692,968605824,368755729,453899476,
           11955389,453899475,11653803,11685320,865264163,11674769,229173842,802699816,950185753,
           453899487,355218662,239441713,453899499,453899495,6836255,311071704,311071705,311071706,963929601]
-# water=[6132612,6132613,453899494]
 
 trail_exclude=[374718863,869037412,374718864,158384993,373619473,374719057,
    913340978,374722616,226524135,226524136,226524140,391588477,374722113,
@@ -34,17 +33,15 @@ trail_exclude=[374718863,869037412,374718864,158384993,373619473,374719057,
    1017402246,1017233900,987705459,230462273,1017233899,1016290812,1016290813,
    1016290814,1016290821,1016737924,1016290823,1016290811,1016737925,987705459,
    1031025307,1031025306,1031025313,1031025311,5573529541,1031017277]
-# waterway_include=[316616217,552141027,552006281]
-#'C:/Users/jkoet/Documents/NP.gpx'
-TerrainTrailSTL.GenerateSTLs(Boundary="NP2.gpx",rd_include=rds,
-    trail_exclude=trail_exclude,
-    waterway_include=[869037419,'North Fork Pine Creek',229173845,229173844,230758606,373619469,228903176,453899494,
-                      "Rocky Dell Run",453899468,229200134,252686622,253313254,462884151,462884151,429200025],
-    waterbody=["North Park Lake","Marshall Lake",348866110,228929014,229173847],
+
+generate_stls(
+    boundary="tests/resources/NP2.gpx",
+    rd_include = rds,
+    trail_exclude = trail_exclude,
+    waterway_include = [869037419,'North Fork Pine Creek',229173845,229173844,230758606,373619469,228903176,453899494,
+                    "Rocky Dell Run",453899468,229200134,252686622,253313254,462884151,462884151,429200025],
+    waterbody = ["North Park Lake","Marshall Lake",348866110,228929014,229173847],
     path_width=0.70,support_width=0.45,path_clearance=0.18,height_factor=3,base_height=8,
-    edge_width=1.5,max_print_size=[249,199],tiles=2,resolution=10,downsample_factor=2,dem_offset=[0,0],
+    edge_width=1.5,max_print_size=[249,199],tiles=1,resolution=30,downsample_factor=2,dem_offset=[0,0],
     map_only=False,compass_loc=[275,136])
-
-#Download terrain data by searching bounding box="-80.034,40.577,-79.974,40.6222", NED 1/3 arc-second, GeoTIFF
-
 

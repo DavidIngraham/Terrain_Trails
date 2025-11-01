@@ -6,11 +6,11 @@ Created on Fri Feb 18 16:43:16 2022
 """
 import trimesh as tm
 import shapely as shp
-from cord_funcs import *
+from .utils.cord_utils import *
 from copy import deepcopy
 
 
-def rotMesh(msh,angle):
+def rotate_mesh(msh,angle):
     #rotate/scale mesh
     rotmat=np.zeros([4,4])
     rotmat[0,0]=np.cos(angle)
@@ -22,7 +22,7 @@ def rotMesh(msh,angle):
     msh.apply_transform(rotmat)
     return msh
 
-def yDovetails(p1,p2,rp):
+def y_dovetails(p1,p2,rp):
     #locate dovetails between two adjacent polygons, assuming polygons share a horizontal edge with p2 on top
     loc=[]
     if p1.bounds[3]>p2.bounds[1]+10**-6: #adjacent tiles shouldn't overlap, slight buffer for precision error.
@@ -53,7 +53,7 @@ def yDovetails(p1,p2,rp):
     return loc
 
 
-def xDovetails(p1,p2,rp):
+def x_dovetails(p1,p2,rp):
     #locate dovetails between two adjacent polygons, assuming polygons share a vertical edge with p2 on the right
     loc=[]
     if p1.bounds[2]>p2.bounds[0]+10**-6: #adjacent tiles shouldn't overlap, slight buffer for precision error.
@@ -83,7 +83,7 @@ def xDovetails(p1,p2,rp):
         loc.append([p1.bounds[2],edge_pts[0]+np.diff(edge_pts).item()/2,0])
     return loc
 
-def splitPoly(poly,y):
+def split_polygon(poly,y):
     
     split_line=shp.geometry.LineString([[poly.bounds[0]-1,poly.bounds[1]+y],[poly.bounds[2]+1,poly.bounds[1]+y]])
     split_poly=np.array(shp.ops.split(poly, split_line))
@@ -105,9 +105,7 @@ def splitPoly(poly,y):
         upper=upper[0]
     return lower,upper
 
-def DovetailInserts(edge_poly,rp,dovetail_height):
-    dovetail_gap=-.1 #negative for interference
-    dovetail_spacing=100 #set to zero for just one per edge
+def dovetail_inserts(edge_poly,rp,dovetail_height):
     
     insert=tm.load('dovetail_insert.stl')
     t=np.eye(4)
@@ -123,24 +121,24 @@ def DovetailInserts(edge_poly,rp,dovetail_height):
     cutouts=[]
     
     cut_loc=[]
-    for i in range(len(edge_poly)-1):
+    for i in range(len(edge_poly.geoms)-1):
         #Y+
-        line=shp.geometry.LineString([[edge_poly[i].bounds[0],edge_poly[i].bounds[3]+.1],[edge_poly[i].bounds[2],edge_poly[i].bounds[3]+.1]])
-        for j in range(i+1,len(edge_poly)):
+        line=shp.geometry.LineString([[edge_poly[i].bounds[0],edge_poly.geoms[i].bounds[3]+.1],[edge_poly.geoms[i].bounds[2],edge_poly.geoms[i].bounds[3]+.1]])
+        for j in range(i+1,len(edge_poly.geoms)):
             if edge_poly[j].intersects(line):
-               cut_loc=cut_loc+yDovetails(edge_poly[i],edge_poly[j],rp)
+               cut_loc=cut_loc+y_dovetails(edge_poly[i],edge_poly[j],rp)
         #Y-
         line=shp.geometry.LineString([[edge_poly[i].bounds[0],edge_poly[i].bounds[1]-.1],[edge_poly[i].bounds[2],edge_poly[i].bounds[1]-.1]])
         for j in range(i+1,len(edge_poly)):
             if edge_poly[j].intersects(line):
-                cut_loc=cut_loc+yDovetails(edge_poly[j],edge_poly[i],rp)
+                cut_loc=cut_loc+y_dovetails(edge_poly[j],edge_poly[i],rp)
 
     for c in cut_loc:
         new_cutout=deepcopy(cutout)
         new_cutout.apply_translation(c)
         cutouts.append(new_cutout)
         
-    cutout=rotMesh(cutout,np.pi/2) #rotate cutout sideways for all vertical seams.
+    cutout=rotate_mesh(cutout,np.pi/2) #rotate cutout sideways for all vertical seams.
     cut_loc=[]
     
     for i in range(len(edge_poly)-1):
@@ -148,12 +146,12 @@ def DovetailInserts(edge_poly,rp,dovetail_height):
         line=shp.geometry.LineString([[edge_poly[i].bounds[2]+.1,edge_poly[i].bounds[1]+10],[edge_poly[i].bounds[2]+.1,edge_poly[i].bounds[3]-10]])
         for j in range(i+1,len(edge_poly)):
             if edge_poly[j].intersects(line):
-               cut_loc=cut_loc+xDovetails(edge_poly[i],edge_poly[j],rp)
+               cut_loc=cut_loc+x_dovetails(edge_poly[i],edge_poly[j],rp)
         #X-
         line=shp.geometry.LineString([[edge_poly[i].bounds[0]-.1,edge_poly[i].bounds[1]+10],[edge_poly[i].bounds[0]-.1,edge_poly[i].bounds[3]-10]])
         for j in range(i+1,len(edge_poly)):
             if edge_poly[j].intersects(line):
-                cut_loc=cut_loc+xDovetails(edge_poly[j],edge_poly[i],rp)
+                cut_loc=cut_loc+x_dovetails(edge_poly[j],edge_poly[i],rp)
 
     for c in cut_loc:
         new_cutout=deepcopy(cutout)
@@ -164,9 +162,9 @@ def DovetailInserts(edge_poly,rp,dovetail_height):
     
     cutouts=tm.boolean.union(cutouts)
     
-    
     return cutouts
-def printScaling_tiled(dem,Boundary,print_size,tiles,dovetail_height):
+
+def print_scaling_tiled(dem,Boundary,print_size,tiles,dovetail_height):
     
     print('Optimizing print size and tile layout.')
     #determine largest size that can be printed with the given number of tiles (only 2 supported for now.)
@@ -213,7 +211,7 @@ def printScaling_tiled(dem,Boundary,print_size,tiles,dovetail_height):
                 if j==rows[i]-1: #don't need to split top/last row.
                     poly_row=rp
                 else:
-                    poly_row,rp=splitPoly(rp,row_height)
+                    poly_row,rp=split_polygon(rp,row_height)
                 width=(poly_row.bounds[2]-poly_row.bounds[0])
                 if scale[i]>print_size[0]*col/width:
                     scale[i]=print_size[0]*col/width 
@@ -254,8 +252,8 @@ def printScaling_tiled(dem,Boundary,print_size,tiles,dovetail_height):
             del edge_poly[-1]
     
     if dovetail_height>0:
-        cutouts=DovetailInserts(edge_poly,rp,dovetail_height)
-        cutouts=rotMesh(cutouts,-print_angle)
+        cutouts=dovetail_inserts(edge_poly,rp,dovetail_height)
+        cutouts=rotate_mesh(cutouts,-print_angle)
         
         
     else:

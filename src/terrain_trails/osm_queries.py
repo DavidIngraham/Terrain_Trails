@@ -2,13 +2,13 @@ import overpy
 import numpy as np
 import shapely as shp
 import time as time
-from cord_funcs import *
+from terrain_trails.utils.cord_utils import *
 import gpxpy as gpxpy
+from typing import List
 api = overpy.Overpass()
 
-
         
-def getFootpaths(result,trail_exclude,trail_include,trail_gpx,corner,scale_factor,offsets,base):
+def get_footpaths(result,trail_exclude,trail_include,trail_gpx,corner,scale_factor,offsets,base):
 
     if isinstance(trail_gpx,str):
         print('Loading footpath from gpx file...')
@@ -61,7 +61,7 @@ def getFootpaths(result,trail_exclude,trail_include,trail_gpx,corner,scale_facto
     # return p
     return lines
 
-def getRoads(result,roads,corner,scale_factor,offsets,base):
+def get_roads(result,roads,corner,scale_factor,offsets,base):
     if len(roads)==0:
         return []
 
@@ -107,7 +107,7 @@ def getRoads(result,roads,corner,scale_factor,offsets,base):
 
 
 
-def getWaterways(result,waterways,corner,scale_factor,offsets,base,map_only):
+def get_waterways(result,waterways,corner,scale_factor,offsets,base,map_only):
     if len(waterways)==0:
         return []
     inc_ways=[]
@@ -134,10 +134,9 @@ def flip(x, y,z):
 
         
 
-def getWaterbodies(result,bodies,corner,scale_factor,clearance,base,height_factor,dem):
+def get_waterbodies(result,bodies,corner,scale_factor,clearance,base,height_factor,dem) -> List[shp.MultiPolygon]:
     if len(bodies)==0:
         return []
-    Thickness=3
 
     w_id=np.array([w.id for w in result.ways])
     polys=[]

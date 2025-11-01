@@ -26,6 +26,10 @@ The following libraries are used:
 
 Blender is also required.
 
+![Example STL](docs/IMG_3317.JPG)
+
+![Close Up](docs/IMG_3319.JPG)
+
 
 # USAGE:
 
