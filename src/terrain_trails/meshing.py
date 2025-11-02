@@ -1,12 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Jan 25 06:51:38 2022
-
-@author: jkoet
-"""
-
-
-# -*- coding: utf-8 -*-
 """
 Created on Tue Jan 25 06:51:38 2022
 
@@ -124,7 +115,6 @@ def terrain_mesh(
     corner: np.ndarray,
     height_factor: float,
     base_height: float,
-    water_drop: float,
 ) -> tm.Trimesh:
     """
     Create a terrain mesh that bounds a lat/lon polygon.
@@ -142,10 +132,7 @@ def terrain_mesh(
     x, y = x[idx], y[idx]
     idx = idx.reshape(dem.lat.shape[0], dem.lon.shape[0])
 
-    z = np.hstack((dem.z[idx], dem.get_elev(edge)))
     edge = cord2dist(edge, corner=corner, f=scale)
-
-    z = (z - z.min()) * scale * height_factor + base_height + 1
 
     verts = np.vstack((x, y)).T
     verts = np.vstack((verts, edge))
@@ -159,12 +146,9 @@ def terrain_mesh(
 
     msh = tm.creation.extrude_triangulation(verts, surf.get_masked_triangles(), 5)
 
-    verts = verts[:vert_cutoff, :]
-    verts = dist2cord(verts, corner=corner, f=scale)
-
     idx = msh.vertices[:, 2] > 0
     z = dem.get_elev(dist2cord(msh.vertices[idx, :2], corner=corner, f=scale))
-    z = (z - dem.z.min()) * scale * height_factor + base_height + 1
+    z = (z - np.min(dem.z)) * scale * height_factor + base_height
     msh.vertices[idx, 2] = z
 
     tm.repair.fix_normals(msh)
@@ -258,7 +242,7 @@ def meshgen2(
                 if g.area > 0.5:
                     c = np.vstack(g.exterior.xy).T
                     c = dist2cord(c, corner=corner, f=sf)
-                    z = (dem.get_elev(c) - float(np.min(dem.z))) * sf * hf + base + 1.0 - 3.0
+                    z = (dem.get_elev(c) - float(np.min(dem.z))) * sf * hf + base - 3.0
                     m = tm.creation.extrude_polygon(g, float(np.max(z) - np.min(z) + 4.0))
                     m.apply_translation([0, 0, float(np.min(z))])
                     parts.append(m)

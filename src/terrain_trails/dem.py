@@ -1,8 +1,5 @@
-from __future__ import annotations
-
 import os
 import math
-from typing import Iterable, List, Tuple
 
 import numpy as np
 import requests
@@ -25,6 +22,7 @@ def _dataset_for_res(res: int) -> tuple[str, str]:
     Return (dataset_name, preferred_format) for TNM Access.
     Supports 10 m (1/3") and 30 m (1").
     """
+ 
     if res == 10:
         return "National Elevation Dataset (NED) 1/3 arc-second", "GeoTIFF"
     if res == 30:
@@ -37,7 +35,10 @@ def _deg_buffer_for_res(res: int) -> float:
     Small geographic buffer in degrees (~10 pixels) to ensure clean edges.
     """
     # 1/3″ ≈ 1/10800 deg per pixel; 1″ ≈ 1/3600 deg per pixel
-    return (10 / 10800.0) if res == 10 else (10 / 3600.0)
+    if res == 10:
+        return 10 / 10800.0
+    if res == 30:
+        return (10 / 3600.0)
 
 
 def _meters_to_degrees(east_m: float, north_m: float, ref_lat_deg: float) -> tuple[float, float]:
@@ -146,7 +147,7 @@ class Dem:
             raise ValueError("poly must be an Nx2 array of [lon, lat]")
 
         res = int(res)
-        if res not in (10, 30):
+        if res not in (1, 10, 30):
             raise ValueError("res must be 10 or 30 (meters)")
 
         dsf = int(dsf)
@@ -291,7 +292,7 @@ class Dem:
         c = np.clip(np.round((pts[:, 0] - self.lon[0]) / dx).astype(int), 0, len(self.lon) - 1)
         return self.z[r, c]
 
-    def plot_elev(self) -> None:
+    def plot_elev(self, show=True) -> None:
         """
         Quicklook plot of the DEM (with geographic extents).
         """
@@ -299,10 +300,12 @@ class Dem:
             np.flip(self.z, axis=0),
             cmap="viridis",
             extent=[self.lon.min(), self.lon.max(), self.lat.min(), self.lat.max()],
-            aspect="auto",
+            aspect="equal",
         )
         plt.colorbar(label="Elevation (m)")
         plt.xlabel("Longitude")
         plt.ylabel("Latitude")
         plt.title("DEM")
-        plt.show()
+        if show:
+            plt.show()
+        return plt.gca()

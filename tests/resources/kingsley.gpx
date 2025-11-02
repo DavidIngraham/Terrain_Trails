@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="GPS Visualizer Sandbox https://www.gpsvisualizer.com/draw/" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+	<trk>
+		<name></name>
+		<desc>Length: 22.53 km (14 mi)</desc>
+		<trkseg>
+			<trkpt lat="45.6970352" lon="-121.593504"></trkpt>
+			<trkpt lat="45.6636704" lon="-121.6046619"></trkpt>
+			<trkpt lat="45.6329009" lon="-121.6760731"></trkpt>
+			<trkpt lat="45.6354061" lon="-121.689291"></trkpt>
+			<trkpt lat="45.6635783" lon="-121.6894627"></trkpt>
+			<trkpt lat="45.6643265" lon="-121.6505814"></trkpt>
+			<trkpt lat="45.6980276" lon="-121.6117859"></trkpt>
+			<trkpt lat="45.6970352" lon="-121.593504"></trkpt>
+		</trkseg>
+	</trk>
+</gpx>

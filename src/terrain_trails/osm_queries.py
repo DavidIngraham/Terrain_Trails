@@ -41,14 +41,12 @@ def get_footpaths(result,trail_exclude,trail_include,trail_gpx,corner,scale_fact
                     #once we find a relation, extract and merge all the ways
                     for m in r.members:
                         w=result.ways[np.argmax(np.isin(w_id,m.ref))]
-                        # if m._type_value == 'way':
                         if (("highway" in w.tags) and (w.tags['highway'] in ['path','footway','cycleway'])) and w.id not in inc_ways:
-                            # outer.append(result.ways[idx])
                             inc_ways.append(w.id)
             
         else:
             for w in result.ways:
-                if  ('highway' in w.tags and w.tags['highway'] in ['path','footway','cycleway']) and not (w.id in trail_exclude) and not ("name" in w.tags and w.tags["name"] in trail_exclude):
+                if  ('highway' in w.tags and w.tags['highway'] in ['path','footway','cycleway']) and not (w.id in trail_exclude) and not ("name" in w.tags and w.tags["name"] in trail_exclude and not "closed" in w.tags):
                     inc_ways.append(w.id)
 
         for num in inc_ways:
@@ -57,8 +55,7 @@ def get_footpaths(result,trail_exclude,trail_include,trail_gpx,corner,scale_fact
             c=cord2dist(xy=c,corner=corner,f=scale_factor)
             coords.append(c)
         lines = shp.geometry.MultiLineString(coords)
-    # p=offsetLines(lines,offsets)
-    # return p
+
     return lines
 
 def get_roads(result,roads,corner,scale_factor):
@@ -96,15 +93,11 @@ def get_roads(result,roads,corner,scale_factor):
         c=cord2dist(xy=c,corner=corner,f=scale_factor)
         coords.append(c)
     lines = shp.geometry.MultiLineString(coords)
-    # if any(inc_ways):
-    #     return offsetLines(lines,offsets)
-    # else:
-    #     return []
+
     if any(inc_ways):
         return lines
     else:
         return shp.geometry.MultiLineString()
-
 
 
 def get_waterways(result,waterways,corner,scale_factor):
@@ -119,20 +112,12 @@ def get_waterways(result,waterways,corner,scale_factor):
             c=cord2dist(xy=c,corner=corner,f=scale_factor)
             coords.append(c)
     lines = shp.geometry.MultiLineString(coords)
-    # if any(inc_ways):
-    #     return offsetLines(lines,offsets)
-    # else:
-    #     return []
+
     if any(inc_ways):
         return lines
     else:
         return shp.geometry.MultiLineString()
     
-def flip(x, y,z):
-    """Flips the x and y coordinate values"""
-    return y, x, z
-
-        
 
 def get_waterbodies(result,bodies,corner,scale_factor) -> List[shp.MultiPolygon]:
     if len(bodies)==0:

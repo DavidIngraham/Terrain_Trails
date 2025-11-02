@@ -50,7 +50,7 @@ def print_scaling(dem: Dem, Boundary: np.ndarray, print_size: list[float]) -> tu
             ]
         )
 
-    print("print angle: {0:.2f} deg".format(print_angle[np.argmax(scale)] * 180 / np.pi))
+    print("Print Angle: {0:.2f} deg".format(print_angle[np.argmax(scale)] * 180 / np.pi))
 
     scale = scale.max()  # Use angle that allows the largest print.
     x, y = cord2dist(x=x, y=y, corner=corner)
@@ -103,15 +103,18 @@ def plot_paths(
     corner = np.array([np.min(x_ll), np.min(y_ll)], dtype=float)
     x_m, y_m = cord2dist(x=x_ll, y=y_ll, corner=corner, f=sf)
 
-    # Terrain gradient backdrop
-    grad = ndimage.sobel(dem.z)
-    ax.imshow(
-        grad,
-        cmap="pink",
+    # Terrain backdrop
+    grad = np.flip(dem.z, axis=0)
+    print(np.min(grad))
+    print(np.max(grad))
+    img = ax.imshow(
+        np.flip(dem.z, axis=0),
+        cmap="viridis",
         extent=[x_m.min(), x_m.max(), y_m.min(), y_m.max()],
         origin="lower",
         aspect="equal",
     )
+    plt.colorbar(img, label="Elevation (m)", ax=ax,)
 
     # Border outline
     draw_polygon(ax, border, fc="none", ec="red", linewidth=0.5)
@@ -151,7 +154,6 @@ def lake_elevation(poly: shp.geometry.Polygon, dem: Dem) -> float:
     z = np.mean(z) # Use the mean of the perimeter as water level
     return z
 
-
 def generate_stls(
     boundary: list | str = [],
     Rect_Pt: list = [],
@@ -165,14 +167,13 @@ def generate_stls(
     path_width: float = 0.7,
     support_width: float = 0.9,
     path_clearance: float = 0.1,
-    height_factor: float = 2,
-    base_height: float = 4,
+    height_factor: float = 1,
+    base_height: float = 1,
     edge_width: float = 1.5,
     max_print_size: list[float] = [248, 198],
     tiles: int = 1,
     dovetails: bool = True,
     dovetail_height: float = 6,
-    water_drop: float = 0.5,
     load_area: list = [],
     resolution: int = 30,
     dem_offset: list[float] = [0, 0],
@@ -180,7 +181,7 @@ def generate_stls(
     map_only: bool = False,
     compass_loc: list[float] = [],
     compass_size: float = 1.0,
-) -> None:
+):
     """
 
     INPUTS:
@@ -204,7 +205,6 @@ def generate_stls(
     tiles - number of tiles to use for terrain print 
     dovetails - boolean to set if tiles are joined with dovetail inserts
     dovetail_height - Thickness of generated dovetail inserts and cutouts, 20 max
-    water_drop - water ways printed slightly lower than other paths and terrain
     load_area - overide automatic area selection
     resolution - 10 or 30, for 10/30 meter resolution DEM.
     dem_offset - offset DEM relative to OSM data to account for shifts in data.
@@ -279,28 +279,20 @@ def generate_stls(
     
     
     print('Processing OSM results')
-    # start = time.time()
-
-    
     areaStr=str("%f, %f, %f, %f" % (np.min(boundary[:,1]),np.min(boundary[:,0]),np.max(boundary[:,1]),np.max(boundary[:,0])))
     num_attempt=0
     OSMresults=-1
     while not str(OSMresults.__class__)=="<class 'overpy.Result'>" and num_attempt<=5:
         try:
             #roads and railways
-            #result = api.query("way(" + areaStr + ") [""highway""];   (._;>;); out body;")
-            # result = api.query("way(" + areaStr + ") [""railway""];   (._;>;); out body;")
             OSMresults = api.query("(rel(" + areaStr + ")[""route""];way(" + areaStr + ") [""highway""];way(" + areaStr + ") [""railway""];way(" + areaStr + ") [""waterway""];rel(" + areaStr + ") [""water""];way(" + areaStr + ") [""water""];);   (._;>;); out body;")
         except:
             num_attempt=num_attempt+1
             print('|')
             time.sleep(5)
 
-
     Footpaths=get_footpaths(OSMresults,trail_exclude,trail_include,trail_gpx,corner,scale_factor)
-    
     Roads=get_roads(OSMresults,rd_include,corner,scale_factor)
-    
     Waterways=get_waterways(OSMresults,waterway_include,corner,scale_factor)
     Waterbodies=get_waterbodies(OSMresults,waterbody,corner,scale_factor)
     
@@ -389,12 +381,12 @@ def generate_stls(
             for e in edge_poly.geoms:
                 b=e.intersection(boundary)
                 if b.geom_type!='GeometryCollection':
-                    t=terrain_mesh(dem,b,scale_factor,corner,height_factor,base_height,water_drop)
+                    t=terrain_mesh(dem,b,scale_factor,corner,height_factor,base_height)
                     terrain.append(t)
         else:
-            terrain=[terrain_mesh(dem,boundary,scale_factor,corner,height_factor,base_height,water_drop)]
+            terrain=[terrain_mesh(dem,boundary,scale_factor,corner,height_factor,base_height)]
             
-        terrain_all=terrain_mesh(dem,boundary,scale_factor,corner,height_factor,base_height,water_drop)
+        terrain_all=terrain_mesh(dem,boundary,scale_factor,corner,height_factor,base_height)
         terrain_all.export('print_files/terrain.stl')
        
         
