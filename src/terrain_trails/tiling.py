@@ -16,7 +16,7 @@ from shapely.ops import split as shp_split
 from importlib import resources
 
 
-from .utils.cord_utils import cord2dist
+from .coordinate_utils import cord2dist
 
 
 def rotate_mesh(msh: tm.Trimesh, angle: float) -> tm.Trimesh:

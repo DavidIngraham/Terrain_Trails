@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="GPS Visualizer Sandbox https://www.gpsvisualizer.com/draw/" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+	<wpt lat="45.6943401" lon="-121.6063786">
+	</wpt>
+	<wpt lat="45.6791103" lon="-121.6094255">
+	</wpt>
+	<trk>
+		<name>post_canyon</name>
+		<desc>Length: 12.69 km (7.888 mi)</desc>
+		<trkseg>
+			<trkpt lat="45.6967681" lon="-121.6022587"></trkpt>
+			<trkpt lat="45.6729033" lon="-121.597023"></trkpt>
+			<trkpt lat="45.6580877" lon="-121.6380501"></trkpt>
+			<trkpt lat="45.6697846" lon="-121.6493797"></trkpt>
+			<trkpt lat="45.6973526" lon="-121.6069579"></trkpt>
+			<trkpt lat="45.6967681" lon="-121.6022587"></trkpt>
+		</trkseg>
+	</trk>
+</gpx>

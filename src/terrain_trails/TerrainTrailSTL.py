@@ -19,8 +19,8 @@ from shapely.plotting import patch_from_polygon
 import matplotlib.pyplot as plt
 from importlib import resources
 
-from .utils.dem_utils import Dem
-from .utils.cord_utils import *
+from .dem import Dem
+from .coordinate_utils import *
 from .osm_queries import *
 from .meshing import *
 from .tiling import print_scaling_tiled
@@ -148,7 +148,7 @@ def lake_elevation(poly: shp.geometry.Polygon, dem: Dem) -> float:
     c = dist2cord(c, corner=dem.corner, f=dem.scale_factor)
 
     z = dem.get_elev(c)  # Perimeter elevation profile
-    z = np.sort(z)[int(0.25 * z.shape[0])]  # Use the 25th percentile value as water level
+    z = np.mean(z) # Use the mean of the perimeter as water level
     return z
 
 
@@ -167,7 +167,6 @@ def generate_stls(
     path_clearance: float = 0.1,
     height_factor: float = 2,
     base_height: float = 4,
-    min_area: float = 0.5,
     edge_width: float = 1.5,
     max_print_size: list[float] = [248, 198],
     tiles: int = 1,
@@ -193,14 +192,13 @@ def generate_stls(
     trail_exclude - footpaths names / ids to inlcude, all included by default.
     trail_include - footpaths names / ids to include. If this is not empty, all other trails are exluded and "trail_exclude" is ignored
     waterway_include - water paths to inlcude, not inlcuding polygon water bodies
-    waterway_include - water areas to include (lakes), current set to print at one level, just below surrounding land.  Will not work well for rivers that are not flat.
+    waterbody - water areas to include (lakes), current set to print at one level, just below surrounding land.  Will not work well for rivers that are not flat.
     trail_gpx - gpx file to use for trail path
     path_width - path (road, footpaths and waterway) print top width, 3 total passes works best.
-    support_width - width of base (one pass less than top)
+    support_width - width of base of the path (one pass less than top)
     path_clearance - clearance between path prints and cutouts.
     height_factor - exaggeration factor for elevation. 1.0 makes on same scale as horizontal dimensions.
     base_height - minium print thickness, should be > 9 if tiling is used.
-    min_area - min area for any printed shape
     edge_width - width of terrian border with no path cutouts
     max_print_size - maximum print dimension.  will scale and rotate print to fit this.
     tiles - number of tiles to use for terrain print 
@@ -278,9 +276,6 @@ def generate_stls(
     else:
         scale_factor,corner,edge_poly=print_scaling(dem,boundary,max_print_size)
         cutouts=[]
-
-    # offsets=[support_width/2,path_width/2,(path_width+path_clearance)/2]
-    offsets=[(path_width+path_clearance)/2]
     
     
     print('Processing OSM results')
@@ -302,45 +297,40 @@ def generate_stls(
             time.sleep(5)
 
 
-    Footpaths=get_footpaths(OSMresults,trail_exclude,trail_include,trail_gpx,corner,scale_factor,offsets,base_height)
+    Footpaths=get_footpaths(OSMresults,trail_exclude,trail_include,trail_gpx,corner,scale_factor)
     
-    Roads=get_roads(OSMresults,rd_include,corner,scale_factor,offsets,base_height)
+    Roads=get_roads(OSMresults,rd_include,corner,scale_factor)
     
-    Waterways=get_waterways(OSMresults,waterway_include,corner,scale_factor,offsets,base_height,map_only)
-    Waterbodies=get_waterbodies(OSMresults,waterbody,corner,scale_factor,path_clearance,base_height,height_factor,dem)
+    Waterways=get_waterways(OSMresults,waterway_include,corner,scale_factor)
+    Waterbodies=get_waterbodies(OSMresults,waterbody,corner,scale_factor)
     
     boundary=shp.geometry.Polygon(cord2dist(xy=boundary,corner=corner,f=scale_factor))
 
     borders=offset_polygon(boundary,[-edge_width-path_clearance,-edge_width-path_clearance/2,-edge_width,0])
-    print('2D Boolean Operations')
     
+    print('Merging Paths in 2D')
         
-    Roads,Footpaths,Waterbodies,Waterways,Cutout=binary_operations([Roads,Footpaths,Waterbodies,Waterways],borders,path_width,support_width,path_clearance,min_area)
-
-    if len(compass_loc)==2: #redundant with other compass section
-        print('generating compass')
-        resource_path = resources.files(__package__).joinpath("resources")
-        cmp=tm.load(resource_path.joinpath("Compass.stl"))
-        t=np.eye(4)
-        t[:2, :2] *= compass_size
-        cmp.apply_transform(t) #scale
-        
-        cmp.apply_translation([compass_loc[0], compass_loc[1],0])
-      
-        c_poly = cmp.section(plane_origin=[0,0,-5],plane_normal=[0,0,1])
-
-        p=[]
-        for e in c_poly.entities:
-            p.append(shp.geometry.Polygon(c_poly.vertices[e.points,:]))
-        if len(p)>1:
-            c_poly=shp.geometry.MultiPolygon(p)
-        else:
-            c_poly=shp.geometry.Polygon(p[0])
-    else:
-        c_poly=[]
+    Roads,Footpaths,Waterbodies,Waterways,Cutout=merge_paths_2d([Roads,Footpaths,Waterbodies,Waterways],borders,path_width,support_width,path_clearance)
     
     if not map_only:
         if len(compass_loc)==2:
+           print('Generating Compass')
+           resource_path = resources.files(__package__).joinpath("resources")
+           cmp=tm.load(resource_path.joinpath("Compass.stl"))
+           t=np.eye(4)
+           t[:2, :2] *= compass_size
+           cmp.apply_transform(t) #scale
+           
+           cmp.apply_translation([compass_loc[0], compass_loc[1],0])
+       
+           c_poly = cmp.section(plane_origin=[0,0,-5],plane_normal=[0,0,1])   
+           p=[]
+           for e in c_poly.entities:
+               p.append(shp.geometry.Polygon(c_poly.vertices[e.points,:]))
+           if len(p)>1:
+               c_poly=shp.geometry.MultiPolygon(p)
+           else:
+               c_poly=shp.geometry.Polygon(p[0])
            #get elevation around edge ofcompass polygon
            edge=[]
            for p in c_poly.geoms:
@@ -355,7 +345,6 @@ def generate_stls(
            #Cut off bottom to just below min elevation
            box=tm.creation.box([200,200,200])
            box.apply_translation([compass_loc[0], compass_loc[1],min(z)-2-1-100])
-           
            cmp.apply_translation([0,0,max(z)])
            cmp.export('temp/c1.stl')
            box.export('temp/b1.stl')
@@ -369,16 +358,15 @@ def generate_stls(
            box=tm.creation.box([200,200,200])
            cmp_cut.apply_translation([compass_loc[0], compass_loc[1],0])
            cmp_cut=[cmp_cut]
+
         else:
             cmp_cut=[]
+            c_poly=[]
+
         wb_heights2=[]
-        if len(Waterbodies)>0:
-            grid=np.meshgrid(dem.lat,dem.lon)
-            x,y=cord2dist(x=grid[1].flatten(),y=grid[0].flatten(),corner=corner,f=scale_factor)
-            
+        if len(Waterbodies)>0:            
             if Waterbodies[1].geom_type == 'MultiPolygon':
                 for i in range(len(Waterbodies[1].geoms)):
-    
                     z=lake_elevation(Waterbodies[1].geoms[i],dem)
                     wb_heights2.append((z-np.min(dem.z))*scale_factor*height_factor+1-3+base_height) #+1 to line up terrain
                     idx=included_points(Waterbodies[1].geoms[i],dem,corner,scale_factor)             
@@ -389,7 +377,7 @@ def generate_stls(
                 idx=included_points(Waterbodies[1],dem,corner,scale_factor)             
                 dem.z[idx]=z #set points to nominal elevation. 
   
-        print('Meshing')
+        print('Meshing All Features')
         rd_msh=meshgen2(Roads,dem,corner,scale_factor,height_factor,base_height,fname='temp/road')
         fp_msh=meshgen2(Footpaths,dem,corner,scale_factor,height_factor,base_height,fname='temp/trail')
         ww_msh=meshgen2(Waterways,dem,corner,scale_factor,height_factor,base_height,fname='temp/water')
@@ -421,7 +409,6 @@ def generate_stls(
             if len(m)>0:
                 cutlist.append(m[0])
                 m[0].export('temp/cc'+str(i)+'.stl')
-                # print(m[0].is_watertight)
                 i=i+1
         for i in range(len(terrain)):
             terrain[i].export('temp/t-'+str(i+1)+'.stl')
@@ -429,13 +416,7 @@ def generate_stls(
                 success = terrain[i].fill_holes()
                 if not success:
                     print(f'Failed to make a watertight volume from terrain segment {i}')
-            #tx=terrain[i]
-            #for j in range(len(cutlist)):
-            #    tx=tm.boolean.difference([tx,cutlist[j]], engine='manifold')
-            #    print(tx.is_watertight)
-            #    if not tx.is_watertight:
-            #        tx.fill_holes()
-            #        print(tx.is_watertight)
+
             terrain[i]=tm.boolean.difference([terrain[i]]+cutlist)
             terrain[i].export('print_files/terrain-'+str(i+1)+'.stl')
 
@@ -484,9 +465,7 @@ def generate_stls(
             wb_msh[1]=tm.boolean.union([wb_msh[1],wb_msh[2]])
             wb_msh[1].export('print_files/waterbodies.stl')
 
-        
+    print('Plotting Results')       
     plot_paths(dem,scale_factor,Waterbodies,Footpaths,Roads,Waterways,boundary,Cutout,c_poly,edge_poly)
-    
-
 
     print("COMPLETE")

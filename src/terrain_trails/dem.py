@@ -7,6 +7,7 @@ from typing import Iterable, List, Tuple
 import numpy as np
 import requests
 import rasterio
+from tqdm import tqdm
 from rasterio.merge import merge
 from rasterio.mask import mask
 from rasterio.transform import xy, Affine
@@ -69,56 +70,50 @@ def _download(url: str, out_path: str) -> str:
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with requests.get(url, stream=True, timeout=180) as resp:
         resp.raise_for_status()
-        with open(out_path, "wb") as f:
+        total = int(resp.headers.get("content-length", 0))
+        with open(out_path, "wb") as f, tqdm(
+            total=total,
+            unit="B",
+            unit_scale=True,
+            unit_divisor=1024,
+            desc=os.path.basename(out_path),
+            disable=(total == 0),
+        ) as pbar:
             for chunk in resp.iter_content(8192):
                 if chunk:
                     f.write(chunk)
+                    pbar.update(len(chunk))
     return out_path
 
-
-def downsample_raster(z, transform, dsf, method=Resampling.average):
-    """
-    Downsample a DEM array using rasterio's reproject() resampling.
-    
-    Parameters
-    ----------
-    z : np.ndarray
-        2D input DEM array.
-    transform : Affine
-        Original raster transform.
-    dsf : int
-        Downsampling factor (>1).
-    method : rasterio.warp.Resampling
-        Resampling method (default: average).
-
-    Returns
-    -------
-    z_ds : np.ndarray
-        Downsampled array.
-    transform_ds : Affine
-        Updated transform for the new grid.
-    """
+def downsample_raster(z, transform, dsf, method=Resampling.average, nodata=None):
     if dsf <= 1:
         return z, transform
 
-    height, width = z.shape
-    new_height = int(height / dsf)
-    new_width = int(width / dsf)
+    print("Downsampling DEM Data")
 
-    z_ds = np.empty((new_height, new_width), dtype=z.dtype)
+    h, w = z.shape
+    H, W = int(h / dsf), int(w / dsf)
 
-    # Scale the transform: multiply pixel size by dsf
+    # Pre-fill with dst nodata
+    fill = nodata if nodata is not None else 0
+    z_ds = np.full((H, W), fill, dtype="float32")
+
     transform_ds = transform * Affine.scale(dsf)
 
     reproject(
-        source=z,
+        source=z.astype("float32"),
         destination=z_ds,
         src_transform=transform,
         src_crs="EPSG:4326",
         dst_transform=transform_ds,
         dst_crs="EPSG:4326",
         resampling=method,
+        src_nodata=fill,
+        dst_nodata=fill,
+        init_dest_nodata=True,   # <- important: keep nodata where no valid samples
     )
+    if np.min(z_ds) < -100:
+        raise Warning('DEM contains large negative numbers after resampling')
 
     return z_ds, transform_ds
 
@@ -173,6 +168,7 @@ class Dem:
         # ---- Cache directory ----
         cache_dir = user_cache_dir("terrain_trails", "dinglabs")
         os.makedirs(cache_dir, exist_ok=True)
+        print(f'Using DEM cache at: {cache_dir}')
 
         # ---- Query TNM & download all intersecting GeoTIFFs ----
         items = _query_tnm(dataset, aoi_bbox, fmt)
@@ -203,7 +199,7 @@ class Dem:
             raise RuntimeError("No usable GeoTIFFs found/downloaded for the requested area.")
 
         # ---- Mosaic all tiles ----
-        srcs = [rasterio.open(p) for p in local_paths]
+        srcs= [rasterio.open(p) for p in local_paths]
         profile = srcs[0].profile.copy()
         mosaic, transform = merge(srcs)
 
@@ -266,6 +262,8 @@ class Dem:
         self.lat = self.lat[lat_sel]
         self.lon = self.lon[lon_sel]
         self.corner = [float(self.lon[0]), float(self.lat[0])]
+
+        print('DEM Loaded')
 
     # ---- Public methods (same names) ----
 

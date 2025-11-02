@@ -2,13 +2,13 @@ import overpy
 import numpy as np
 import shapely as shp
 import time as time
-from terrain_trails.utils.cord_utils import *
+from terrain_trails.coordinate_utils import *
 import gpxpy as gpxpy
 from typing import List
 api = overpy.Overpass()
 
         
-def get_footpaths(result,trail_exclude,trail_include,trail_gpx,corner,scale_factor,offsets,base):
+def get_footpaths(result,trail_exclude,trail_include,trail_gpx,corner,scale_factor):
 
     if isinstance(trail_gpx,str):
         print('Loading footpath from gpx file...')
@@ -61,9 +61,9 @@ def get_footpaths(result,trail_exclude,trail_include,trail_gpx,corner,scale_fact
     # return p
     return lines
 
-def get_roads(result,roads,corner,scale_factor,offsets,base):
+def get_roads(result,roads,corner,scale_factor):
     if len(roads)==0:
-        return []
+        return shp.geometry.MultiLineString()
 
     rd_names=[]
     if any(roads):
@@ -103,13 +103,13 @@ def get_roads(result,roads,corner,scale_factor,offsets,base):
     if any(inc_ways):
         return lines
     else:
-        return []
+        return shp.geometry.MultiLineString()
 
 
 
-def get_waterways(result,waterways,corner,scale_factor,offsets,base,map_only):
+def get_waterways(result,waterways,corner,scale_factor):
     if len(waterways)==0:
-        return []
+        shp.geometry.MultiLineString()
     inc_ways=[]
     coords=[]
     for w in result.ways:
@@ -126,7 +126,7 @@ def get_waterways(result,waterways,corner,scale_factor,offsets,base,map_only):
     if any(inc_ways):
         return lines
     else:
-        return []
+        return shp.geometry.MultiLineString()
     
 def flip(x, y,z):
     """Flips the x and y coordinate values"""
@@ -134,9 +134,9 @@ def flip(x, y,z):
 
         
 
-def get_waterbodies(result,bodies,corner,scale_factor,clearance,base,height_factor,dem) -> List[shp.MultiPolygon]:
+def get_waterbodies(result,bodies,corner,scale_factor) -> List[shp.MultiPolygon]:
     if len(bodies)==0:
-        return []
+        return shp.geometry.MultiPolygon()
 
     w_id=np.array([w.id for w in result.ways])
     polys=[]

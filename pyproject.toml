@@ -19,6 +19,7 @@ dependencies = [
     "rasterio>=1.4.3",
     "scipy>=1.16.3",
     "shapely>=2.1.2",
+    "tqdm>=4.67.1",
     "triangle>=20250106",
     "trimesh>=4.9.0",
 ]

@@ -18,8 +18,8 @@ import shapely as shp
 from shapely.geometry import Polygon, MultiPolygon, MultiPoint, LineString
 import trimesh as tm
 import matplotlib as mpl
-from terrain_trails.utils.cord_utils import *
-from terrain_trails.utils.dem_utils import Dem
+from terrain_trails.coordinate_utils import *
+from terrain_trails.dem import Dem
 from typing import Union, Sequence, List, Tuple
 
 Geom = Union[Polygon, MultiPolygon]
@@ -216,7 +216,7 @@ def meshgen_wb(ply: Union[Geom, List[Geom]], h: List[float], fname: str, elev: L
         ply = [ply]
 
     meshes: List[tm.Trimesh] = []
-    for i in range(3):
+    for i in range(len(ply)):
         geom = ply[i]
         if geom.geom_type == "MultiPolygon":
             parts = []
@@ -316,13 +316,12 @@ def offset_polygon(ply: Geom, offsets: Union[float, List[float]]) -> List[Geom]:
     return out
 
 
-def binary_operations(
+def merge_paths_2d(
     paths: List[LineString],
     b: List[Geom],
     pWidth: float,
     sWidth: float,
     clearance: float,
-    min_area: float,
 ) -> Tuple[List[Geom], Geom]:
     """
     Inflate line strings into cutout/top/support polygons with priorities.
